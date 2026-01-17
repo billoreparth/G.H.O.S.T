@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Power Monitor</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+    --bg: #0f172a;
+    --panel: #020617;
+    --border: #1e293b;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+}
+
+body.danger {
+    --bg: #3b0000;
+    --panel: #5c0000;
+    --border: #991b1b;
+    --text: #fee2e2;
+    --muted: #fecaca;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: 0.3s ease;
+}
+
+header {
+    padding: 15px 25px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.container {
+    padding: 20px;
+    max-width: 1300px;
+    margin: auto;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.card p {
+    margin-top: 10px;
+    font-size: 30px;
+    font-weight: 600;
+}
+
+.unit {
+    font-size: 15px;
+    color: var(--muted);
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.chart-box {
+    background: var(--panel);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    height: 260px;
+}
+
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Grid Health Section */
+.grid-health {
+    margin-top: 20px;
+    background: var(--panel);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.grid-health h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+}
+
+.health-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.health-card {
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.health-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.health-card p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.status-normal { background: rgba(34, 197, 94, 0.1); border-color: #22c55e; }
+.status-warning { background: rgba(234, 179, 8, 0.1); border-color: #eab308; }
+.status-critical { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+
+footer {
+    text-align: center;
+    padding: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 20px;
+}
+
+/* Warning Modal */
+#warning {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    z-index: 999;
+}
+
+#warning .box {
+    background: #7f1d1d;
+    padding: 30px;
+    border-radius: 12px;
+    border: 2px solid #ef4444;
+    text-align: center;
+    width: 320px;
+}
+
+/* Theft Detection Popup */
+#theft-alert {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #f59e0b;
+    color: #451a03;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border-left: 4px solid #d97706;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+#theft-alert.hide {
+    animation: slideOut 0.3s ease forwards;
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+#theft-alert .icon {
+    font-size: 24px;
+}
+
+#theft-alert .content h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+}
+
+#theft-alert .content p {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.9;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>⚡ Live Voltage, Current & Power Monitor (Admin)</h1>
+</header>
+
+<div class="container">
+
+    <div class="cards">
+        <div class="card">
+            <h3>Voltage</h3>
+            <p><span id="voltage">--</span> <span class="unit">V</span></p>
+        </div>
+
+        <div class="card">
+            <h3>Current</h3>
+            <p><span id="current">--</span> <span class="unit">A</span></p>
+        </div>
+
+        <div class="card">
+            <h3>Power</h3>
+            <p><span id="power">--</span> <span class="unit">W</span></p>
+        </div>
+    </div>
+
+    <div class="charts">
+        <div class="chart-box"><canvas id="voltageChart"></canvas></div>
+        <div class="chart-box"><canvas id="currentChart"></canvas></div>
+        <div class="chart-box"><canvas id="powerChart"></canvas></div>
+    </div>
+
+    <!-- Grid Health Status Section -->
+    <div class="grid-health">
+        <h2>Grid Health Status</h2>
+        <div class="health-cards">
+            <div class="health-card status-normal" id="voltage-status">
+                <h4>Voltage Stability</h4>
+                <p id="voltage-status-text">Normal</p>
+            </div>
+            <div class="health-card status-normal" id="current-status">
+                <h4>Current Stability</h4>
+                <p id="current-status-text">Normal</p>
+            </div>
+            <div class="health-card status-normal" id="power-status">
+                <h4>Power Quality</h4>
+                <p id="power-status-text">Good</p>
+            </div>
+            <div class="health-card status-normal" id="grid-status">
+                <h4>Overall Grid Health</h4>
+                <p id="grid-status-text">Healthy</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    Admin Dashboard • Real-Time Electrical Monitoring • Grid Health Monitoring Active
+</footer>
+
+<!-- Overcurrent Warning Modal -->
+<div id="warning">
+    <div class="box">
+        <h2>⚠ Overcurrent Alert</h2>
+        <p>Current exceeded 20 A</p>
+    </div>
+</div>
+
+<!-- Theft Detection Popup -->
+<div id="theft-alert">
+    <div class="icon">🚨</div>
+    <div class="content">
+        <h4>Theft Detected!</h4>
+        <p>Abnormal current detected (10-20 A range)</p>
+    </div>
+</div>
+
+<script>
+let voltageData = [];
+let currentData = [];
+let powerData   = [];
+let labels = [];
+
+const MAX_POINTS = 40;
+const CURRENT_LIMIT = 20;
+const THEFT_THRESHOLD_MIN = 10;
+const THEFT_THRESHOLD_MAX = 20;
+
+let isFetching = false;
+let theftAlertActive = false;
+let theftAlertTimeout = null;
+
+const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: { y: { beginAtZero: true } }
+};
+
+// Initialize charts
+const voltageChart = new Chart(
+    document.getElementById("voltageChart"),
+    {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Voltage (V)',
+                data: voltageData,
+                tension: 0.3,
+                borderColor: '#60a5fa',
+                backgroundColor: 'rgba(96, 165, 250, 0.1)'
+            }]
+        },
+        options: commonOptions
+    }
+);
+
+const currentChart = new Chart(
+    document.getElementById("currentChart"),
+    {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Current (A)',
+                data: currentData,
+                tension: 0.3,
+                borderColor: '#f87171',
+                backgroundColor: 'rgba(248, 113, 113, 0.1)'
+            }]
+        },
+        options: commonOptions
+    }
+);
+
+const powerChart = new Chart(
+    document.getElementById("powerChart"),
+    {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Power (W)',
+                data: powerData,
+                tension: 0.3,
+                borderColor: '#34d399',
+                backgroundColor: 'rgba(52, 211, 153, 0.1)'
+            }]
+        },
+        options: commonOptions
+    }
+);
+
+// Function to show theft alert
+function showTheftAlert() {
+    if (theftAlertActive) return;
+    
+    theftAlertActive = true;
+    const theftAlert = document.getElementById("theft-alert");
+    
+    // Show alert
+    theftAlert.style.display = "flex";
+    theftAlert.classList.remove("hide");
+    
+    // Auto-hide after 3 seconds
+    theftAlertTimeout = setTimeout(() => {
+        theftAlert.classList.add("hide");
+        setTimeout(() => {
+            theftAlert.style.display = "none";
+            theftAlertActive = false;
+        }, 300);
+    }, 3000);
+}
+
+// Function to update grid health status
+function updateGridHealthStatus(voltage, current, power) {
+    // Update voltage status
+    const voltageStatus = document.getElementById("voltage-status");
+    const voltageStatusText = document.getElementById("voltage-status-text");
+    
+    if (voltage >= 210 && voltage <= 250) {
+        voltageStatus.className = "health-card status-normal";
+        voltageStatusText.textContent = "Normal";
+    } else if (voltage >= 190 && voltage <= 280) {
+        voltageStatus.className = "health-card status-warning";
+        voltageStatusText.textContent = "Unstable";
+    } else {
+        voltageStatus.className = "health-card status-critical";
+        voltageStatusText.textContent = "Critical";
+    }
+    
+    // Update current status
+    const currentStatus = document.getElementById("current-status");
+    const currentStatusText = document.getElementById("current-status-text");
+    
+    if (current < 10) {
+        currentStatus.className = "health-card status-normal";
+        currentStatusText.textContent = "Normal";
+    } else if (current >= 10 && current <= 20) {
+        currentStatus.className = "health-card status-warning";
+        currentStatusText.textContent = "High Load";
+    } else {
+        currentStatus.className = "health-card status-critical";
+        currentStatusText.textContent = "Overload";
+    }
+    
+    // Update power status
+    const powerStatus = document.getElementById("power-status");
+    const powerStatusText = document.getElementById("power-status-text");
+    const powerFactor = (power / (voltage * current)).toFixed(2);
+    
+    if (powerFactor > 0.9) {
+        powerStatus.className = "health-card status-normal";
+        powerStatusText.textContent = "Good";
+    } else if (powerFactor > 0.7) {
+        powerStatus.className = "health-card status-warning";
+        powerStatusText.textContent = "Fair";
+    } else {
+        powerStatus.className = "health-card status-critical";
+        powerStatusText.textContent = "Poor";
+    }
+    
+    // Update overall grid status
+    const gridStatus = document.getElementById("grid-status");
+    const gridStatusText = document.getElementById("grid-status-text");
+    
+    // Determine overall status (worst of all metrics)
+    const statuses = [
+        voltageStatus.className.includes("critical"),
+        currentStatus.className.includes("critical"),
+        powerStatus.className.includes("critical")
+    ];
+    
+    const warnings = [
+        voltageStatus.className.includes("warning"),
+        currentStatus.className.includes("warning"),
+        powerStatus.className.includes("warning")
+    ];
+    
+    if (statuses.includes(true)) {
+        gridStatus.className = "health-card status-critical";
+        gridStatusText.textContent = "Critical";
+    } else if (warnings.includes(true)) {
+        gridStatus.className = "health-card status-warning";
+        gridStatusText.textContent = "Warning";
+    } else {
+        gridStatus.className = "health-card status-normal";
+        gridStatusText.textContent = "Healthy";
+    }
+}
+
+async function fetchData() {
+    if (isFetching) return;
+    isFetching = true;
+
+    try {
+        const res = await fetch("/admin/data");
+        const data = await res.json();
+
+        if (data.voltage.length > 0) {
+            for (let i = 0; i < data.voltage.length; i++) {
+                const v = data.voltage[i];
+                const c = data.current[i];
+                const p = v * c;
+
+                voltageData.push(v);
+                currentData.push(c);
+                powerData.push(p);
+                labels.push(data.timestamp[i]);
+
+                document.getElementById("voltage").innerText = v;
+                document.getElementById("current").innerText = c;
+                document.getElementById("power").innerText = p.toFixed(2);
+
+                // Update grid health status
+                updateGridHealthStatus(v, c, p);
+                
+                // 🚨 Check for theft detection (10-20 A range)
+                if (c > THEFT_THRESHOLD_MIN && c < THEFT_THRESHOLD_MAX) {
+                    showTheftAlert();
+                }
+
+                // 🚨 Check for overcurrent (above 20 A)
+                if (c > CURRENT_LIMIT) {
+                    document.body.classList.add("danger");
+                    document.getElementById("warning").style.display = "flex";
+                } else {
+                    document.body.classList.remove("danger");
+                    document.getElementById("warning").style.display = "none";
+                }
+
+                if (labels.length > MAX_POINTS) {
+                    labels.shift();
+                    voltageData.shift();
+                    currentData.shift();
+                    powerData.shift();
+                }
+            }
+
+            voltageChart.update();
+            currentChart.update();
+            powerChart.update();
+        }
+    } catch (e) {
+        console.error("Fetch error:", e);
+        
+        // Update grid health to show error state
+        document.getElementById("grid-status").className = "health-card status-critical";
+        document.getElementById("grid-status-text").textContent = "Error";
+        document.getElementById("voltage-status-text").textContent = "N/A";
+        document.getElementById("current-status-text").textContent = "N/A";
+        document.getElementById("power-status-text").textContent = "N/A";
+    } finally {
+        isFetching = false;
+    }
+}
+
+async function poll() {
+    await fetchData();
+    setTimeout(poll, 500);
+}
+
+// Initialize grid health status
+updateGridHealthStatus(0, 0, 0);
+
+// Start polling
+poll();
+</script>
+
+</body>
+</html>
