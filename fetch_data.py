@@ -2,7 +2,7 @@ import pandas as pd
 from pymongo import MongoClient
 
 # 🔐 MongoDB Atlas cluster URL
-MONGO_URI = "mongodb+srv://billoreparth80_db_user:Kyv8bP9XXT1BJKUx@ghostapi.3qe1pdk.mongodb.net/?appName=GHOSTapi"
+MONGO_URI = "mongodb+srv://***db_user***:******pass******@ghostapi.3qe1pdk.mongodb.net/?appName=GHOSTapi"
 
 # 📌 Database and collection names
 DB_NAME = "GHOSTapi"
