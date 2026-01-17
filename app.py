@@ -6,7 +6,7 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-MONGO_URI = "mongodb+srv://billoreparth80_db_user:Kyv8bP9XXT1BJKUx@ghostapi.3qe1pdk.mongodb.net/?appName=GHOSTapi"
+MONGO_URI = "mongodb+srv://***db_user***:****pass***@ghostapi.3qe1pdk.mongodb.net/?appName=GHOSTapi"
 client = MongoClient(MONGO_URI)
 
 db = client["GHOSTapi"]
